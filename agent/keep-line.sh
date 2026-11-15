@@ -6,6 +6,7 @@
 # - Every REFRESH_SECS (default 20 minutes) it reconnects, but only while no call
 #   is in progress: after ~30 idle minutes Chert stops routing calls to the session,
 #   and a fresh connection fixes that.
+# - Reconnects at once if chert dev reports agent_not_warm for over 45 s.
 # - Ctrl+C stops it for good and releases the line.
 #
 # Usage: zsh keep-line.sh            (from the agent folder, in its own terminal)
@@ -18,28 +19,40 @@ mkdir -p "${LOG:h}"
 
 note() { print -r -- "{\"code\":\"keep_line\",\"at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"message\":\"$1\"}" | tee -a "$LOG"; }
 
-# "yes" when a call started in the last 6 minutes (calls are capped at 5) and has not ended.
-call_in_progress() {
+# "call" while a call is in progress (started in the last 6 minutes, calls are capped
+# at 5, and not ended), "not_warm" when chert dev has reported agent_not_warm for over
+# 45 s (the waiting room was lost, e.g. after a network blip), otherwise "ok".
+line_status() {
   python3 -I - "$LOG" <<'EOF'
-import json, sys, datetime
+import collections, datetime, json, sys
 now = datetime.datetime.now(datetime.timezone.utc)
-live = {}
-for line in open(sys.argv[1], errors="ignore"):
+def at(d):
+    try:
+        return datetime.datetime.fromisoformat(d["at"].replace("Z", "+00:00"))
+    except Exception:
+        return now
+live, not_warm_since = {}, None
+for line in collections.deque(open(sys.argv[1], errors="ignore"), maxlen=3000):
     try:
         d = json.loads(line)
     except Exception:
         continue
-    cid, code = d.get("call_id"), d.get("code", "")
-    if not cid:
-        continue
-    if code in ("call_ended", "call_declined"):
-        live.pop(cid, None)
-    elif code.startswith("call_"):
-        try:
-            live[cid] = datetime.datetime.fromisoformat(d["at"].replace("Z", "+00:00"))
-        except Exception:
-            live[cid] = now
-print("yes" if any((now - t).total_seconds() < 360 for t in live.values()) else "no")
+    code, cid = d.get("code", ""), d.get("call_id")
+    if cid:
+        if code in ("call_ended", "call_declined"):
+            live.pop(cid, None)
+        elif code.startswith("call_"):
+            live[cid] = at(d)
+    if code == "agent_not_warm":
+        not_warm_since = not_warm_since or at(d)
+    elif code in ("agent_warm", "dev_ready", "dev_stopped"):
+        not_warm_since = None
+if any((now - t).total_seconds() < 360 for t in live.values()):
+    print("call")
+elif not_warm_since and (now - not_warm_since).total_seconds() > 45:
+    print("not_warm")
+else:
+    print("ok")
 EOF
 }
 
@@ -56,8 +69,13 @@ while (( ! stopping )); do
   refreshed=0
   while kill -0 $pid 2>/dev/null && (( ! stopping )); do
     sleep 5
-    if (( SECONDS - started >= REFRESH_SECS )) && [[ $(call_in_progress) == no ]]; then
-      note "Reconnecting the line to keep Chert routing calls (no call in progress)."
+    st=$(line_status)
+    if [[ $st == not_warm ]] || { (( SECONDS - started >= REFRESH_SECS )) && [[ $st == ok ]]; }; then
+      if [[ $st == not_warm ]]; then
+        note "Chert lost the waiting room (agent_not_warm); reconnecting."
+      else
+        note "Reconnecting the line to keep Chert routing calls (no call in progress)."
+      fi
       refreshed=1
       stop_dev
       break
