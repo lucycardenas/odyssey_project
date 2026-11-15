@@ -1,0 +1,12 @@
+{
+  "name": "odyssey-supabase",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed": "node --env-file=.env scripts/seed.mjs",
+    "simulate": "node --env-file=.env scripts/simulate-call.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.0"
+  }
+}
