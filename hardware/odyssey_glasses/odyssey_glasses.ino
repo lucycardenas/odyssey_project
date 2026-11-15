@@ -14,13 +14,43 @@
 // Pins: D5 = left motor, D6 = right motor (through a transistor or a motor
 // module), D9 = HC-SR04 TRIG, D10 = HC-SR04 ECHO. Keep pins 0 and 1 free:
 // they are the USB serial link.
+//
+// Optional HC-05 Bluetooth (same commands and replies, 9600 baud, wireless):
+// HC-05 TXD -> D2, D3 -> 1k -> HC-05 RXD (and 2k from RXD to GND: RXD is 3.3 V),
+// VCC -> 5V, GND -> GND. Pair it with the Mac (PIN 1234 or 0000) and the agent
+// finds it as /dev/cu.HC-05*. USB keeps working at the same time as a backup.
 
-#define USE_LCD 0  // 1 if the optional LCD1602 is wired (RS 12, E 11, D4-D7 on 4, 3, 2, 7)
+#define USE_LCD 0        // 1 if the optional LCD1602 is wired (RS 12, E 11, D4-D7 on 4, 3, 2, 7)
+#define USE_BLUETOOTH 1  // HC-05 on D2/D3; must be 0 when USE_LCD is 1 (the LCD uses D2/D3)
+
+#if USE_LCD && USE_BLUETOOTH
+#error "The LCD and the HC-05 both use pins 2 and 3: turn one of them off"
+#endif
 
 #if USE_LCD
 #include <LiquidCrystal.h>
 LiquidCrystal lcd(12, 11, 4, 3, 2, 7);
 #endif
+
+#if USE_BLUETOOTH
+#include <SoftwareSerial.h>
+SoftwareSerial bt(2, 3);  // RX = D2 (from HC-05 TXD), TX = D3 (to HC-05 RXD via divider)
+#endif
+
+// Sends one line to the laptop over USB and, when fitted, over Bluetooth.
+void say(const char* line) {
+  Serial.println(line);
+#if USE_BLUETOOTH
+  bt.println(line);
+#endif
+}
+
+void sayNumber(const char* prefix, int value) {
+  Serial.print(prefix); Serial.println(value);
+#if USE_BLUETOOTH
+  bt.print(prefix); bt.println(value);
+#endif
+}
 
 const int MOTOR_L = 5, MOTOR_R = 6;  // PWM pins
 const int TRIG = 9, ECHO = 10;       // HC-SR04
@@ -61,10 +91,12 @@ void handleCommand(char c) {
     case 'F': pulse(STRENGTH, STRENGTH, 120); delay(100);
               pulse(STRENGTH, STRENGTH, 120); show("FOUND"); break;
     case 'S': pulse(255, 255, 600); show("STOP"); break;
-    case '?': Serial.println("READY"); return;
+    case '?': say("READY"); return;
     default: return;  // ignore newlines and junk
   }
-  Serial.print("ACK:"); Serial.println(c);
+  char ack[] = "ACK:?";
+  ack[4] = c;
+  say(ack);
 }
 
 void setup() {
@@ -73,16 +105,22 @@ void setup() {
   pinMode(ECHO, INPUT_PULLUP);  // reads "nothing in range" if the sensor is unplugged
   motors(0, 0);
   Serial.begin(115200);
+#if USE_BLUETOOTH
+  bt.begin(9600);  // HC-05 default data-mode speed
+#endif
 #if USE_LCD
   lcd.begin(16, 2);
 #endif
   show("Odyssey ready");
-  Serial.println("READY");
+  say("READY");
 }
 
 void loop() {
-  // 1) Commands from the agent
+  // 1) Commands from the agent, over USB or Bluetooth
   while (Serial.available()) handleCommand(Serial.read());
+#if USE_BLUETOOTH
+  while (bt.available()) handleCommand(bt.read());
+#endif
 
   // 2) Local obstacle detection, independent of the laptop
   unsigned long now = millis();
@@ -100,7 +138,7 @@ void loop() {
     }
     if (now - lastReport >= 1000) {
       lastReport = now;
-      Serial.print("O:"); Serial.println(distanceCm);
+      sayNumber("O:", distanceCm);
       show("OBSTACLE");
     }
   }

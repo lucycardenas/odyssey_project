@@ -12,12 +12,16 @@ const LETTERS = { left: 'L', right: 'R', found: 'F', stop: 'S' };
 // Genuine UNO (2341, 2a03), CH340 clones (1a86), FTDI (0403), CP210x (10c4).
 const ARDUINO_VENDORS = ['2341', '2a03', '1a86', '0403', '10c4'];
 
-/** The UNO's serial port: SERIAL_PORT from .env.local, or the first Arduino-like USB device. */
+/**
+ * The glasses' serial port: SERIAL_PORT from .env.local, else the UNO on USB,
+ * else a paired HC-05 Bluetooth module (macOS names it /dev/cu.HC-05...).
+ */
 export async function findGlassesPort() {
   if (process.env.SERIAL_PORT) return process.env.SERIAL_PORT;
   const ports = await SerialPort.list();
   const hit = ports.find(p => ARDUINO_VENDORS.includes((p.vendorId || '').toLowerCase()))
-    || ports.find(p => /usbmodem|usbserial|wchusbserial/i.test(p.path));
+    || ports.find(p => /usbmodem|usbserial|wchusbserial/i.test(p.path))
+    || ports.find(p => /HC-?0[56]/i.test(p.path));
   // macOS: the cu.* device opens without waiting for a carrier signal; tty.* can hang.
   return hit ? hit.path.replace('/dev/tty.', '/dev/cu.') : null;
 }
