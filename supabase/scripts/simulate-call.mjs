@@ -4,8 +4,9 @@
 //        npm run simulate -- --fast                 (1 s between rows)
 import { createClient } from "@supabase/supabase-js";
 import { TRAVELER_ID, VOYAGES } from "./seed.mjs";
+import { summarizeCall } from "./summarize-call.mjs";
 
-const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, DASHBOARD_URL, AGENT_WEBHOOK_SECRET } = process.env;
+const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in supabase/.env");
   process.exit(1);
@@ -33,12 +34,6 @@ for (const s of voyage.steps) {
 must(await db.from("calls").update({ ended_at: new Date().toISOString() }).eq("id", call.id));
 console.log("Call ended");
 
-// Optional: ask the dashboard to write the Gemini summary, like the agent would.
-if (DASHBOARD_URL && AGENT_WEBHOOK_SECRET) {
-  const res = await fetch(`${DASHBOARD_URL}/api/summarize`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-agent-secret": AGENT_WEBHOOK_SECRET },
-    body: JSON.stringify({ callId: call.id }),
-  });
-  console.log(`Summary: ${res.status}`, await res.text());
-}
+// Write the Gemini summary, like the agent does when a call ends.
+// Uses GEMINI_API_KEY from supabase/.env, or a simple fallback summary without it.
+console.log(`Summary:\n${await summarizeCall(db, call.id)}`);
