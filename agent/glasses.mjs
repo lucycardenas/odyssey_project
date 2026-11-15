@@ -21,15 +21,16 @@ const LETTERS = { left: 'L', right: 'R', found: 'F', stop: 'S' };
 const ARDUINO_VENDORS = ['2341', '2a03', '1a86', '0403', '10c4'];
 
 /**
- * The glasses' serial port: SERIAL_PORT from .env.local, else the UNO on USB,
- * else a paired HC-05 Bluetooth module (macOS names it /dev/cu.HC-05...).
+ * The glasses' serial port: SERIAL_PORT from .env.local, else the UNO on USB.
+ * A /dev/cu.HC-05 port is never picked on its own: macOS keeps that device file
+ * even when it cannot pair the module, and it opens without reaching the glasses.
+ * (Set SERIAL_PORT=/dev/cu.HC-05 if this Mac ever does pair it.)
  */
 export async function findGlassesPort() {
   if (process.env.SERIAL_PORT) return process.env.SERIAL_PORT;
   const ports = await SerialPort.list();
   const hit = ports.find(p => ARDUINO_VENDORS.includes((p.vendorId || '').toLowerCase()))
-    || ports.find(p => /usbmodem|usbserial|wchusbserial/i.test(p.path))
-    || ports.find(p => /HC-?0[56]/i.test(p.path));
+    || ports.find(p => /usbmodem|usbserial|wchusbserial/i.test(p.path));
   // macOS: the cu.* device opens without waiting for a carrier signal; tty.* can hang.
   return hit ? hit.path.replace('/dev/tty.', '/dev/cu.') : null;
 }
