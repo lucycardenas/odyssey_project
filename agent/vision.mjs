@@ -5,7 +5,8 @@ import { GoogleGenAI } from '@google/genai';
 import { RoomEvent, TrackKind, VideoBufferType, VideoStream } from '@livekit/rtc-node';
 import sharp from 'sharp';
 
-const VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-3.5-flash';
+// Flash-Lite: ~1-2 s per frame, and its free-tier daily limit is separate from gemini-3.5-flash's 20 requests.
+const VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-3.5-flash-lite';
 const MAX_SIDE = 768;
 
 /**
@@ -75,6 +76,8 @@ export async function describeFrame(jpeg, question) {
         { text: `This is a live frame from the caller's camera (smart glasses or phone). ${question}\nAnswer in one or two short spoken sentences. If there is a hazard, mention it first; otherwise do not talk about hazards.` },
       ],
     }],
+    // Minimal thinking: about 1-2 s per answer instead of 3-10+ s with the default.
+    config: { thinkingConfig: { thinkingLevel: process.env.GEMINI_VISION_THINKING || 'MINIMAL' } },
   });
   return res.text?.trim() || 'I could not make out the image.';
 }

@@ -53,7 +53,8 @@ export async function endCall(callId) {
   try {
     await summarizeCall(db, callId, {
       apiKey: process.env.GOOGLE_API_KEY,
-      model: process.env.GEMINI_SUMMARY_MODEL || process.env.GEMINI_VISION_MODEL || 'gemini-3.5-flash',
+      // A different model from the camera's, so summaries never use up the camera's free daily quota.
+      model: process.env.GEMINI_SUMMARY_MODEL || 'gemini-3.1-flash-lite',
     });
     console.log(`[supabase] call ${callId} summarized`);
   } catch (err) {

@@ -17,13 +17,15 @@ Listen carefully, answer calmly, and keep each reply to one or two short sentenc
 If the caller sounds lost or in danger, stay with them and tell them help can be contacted.
 Be clear that you are an AI.
 You cannot see the camera directly. Whenever the caller asks what you see, what is around them,
-to read something, or anything visual, call the look tool with their question and answer from its result.
+to read something, or anything visual, first say a few words like "Let me take a look", then call
+the look tool with their question and answer from its result. Never stay silent while you look.
 The caller wears haptic glasses that vibrate on the left or right temple. Whenever you give a direction,
 also call the buzz tool: left or right when they should turn that way, found when what they asked for
 is straight ahead. If you see an immediate hazard, call buzz with stop first, then explain.
 The glasses also have a distance sensor that buzzes on its own when something is close in front of them.`;
 const OBSTACLE_WARNING_GAP_MS = 8000; // speak an obstacle warning at most this often
 const OBSTACLE_CLEAR_MS = 3000; // no reading for this long = the path was clear, so the next one is new
+const LOOK_TIMEOUT_MS = 8000; // a camera answer slower than this is dropped so the call never goes silent
 // Said once, as soon as FaceTime is ready. Keep it short: it is the first thing the caller hears.
 const greeting = 'Greet the caller in one short sentence: say you are Odyssey, their AI guide, and ask how you can help.';
 
@@ -53,8 +55,15 @@ const agent = defineAgent({
       execute: async ({ question }) => {
         const shot = await vision.snapshot();
         if (!shot) return 'No camera video has arrived yet. Ask the caller to turn on their camera.';
+        const started = Date.now();
         try {
-          return await describeFrame(shot.jpeg, question);
+          // Never leave the caller in silence: give up after LOOK_TIMEOUT_MS.
+          const answer = await Promise.race([
+            describeFrame(shot.jpeg, question),
+            new Promise(resolve => setTimeout(() => resolve(null), LOOK_TIMEOUT_MS)),
+          ]);
+          console.log(`[look] ${answer ? 'answered' : 'timed out'} in ${Date.now() - started} ms`);
+          return answer ?? 'The camera view is taking too long to analyze. Tell the caller you could not see clearly and ask them to try again.';
         } catch (err) {
           console.error('look failed', err);
           return 'The camera view could not be analyzed just now.';
