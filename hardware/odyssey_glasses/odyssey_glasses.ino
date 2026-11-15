@@ -61,11 +61,14 @@ const int STRENGTH = 255;            // 0-255
 const int TURN_MS = 500;             // L / R
 const int FOUND_MS = 250;            // F: two of these
 const int STOP_MS = 1000;            // S
-const int OBSTACLE_SPIN_MS = 250;    // each spin while something is close
-const int OBSTACLE_CM = 60;          // closer than this = local warning spins
+const int OBSTACLE_SPIN_MS = 600;    // one spin when a new obstacle appears
+const int OBSTACLE_CM = 60;          // closer than this = obstacle
+const unsigned long CLEAR_MS = 2000; // path clear this long = the next obstacle is new
 
-unsigned long lastPing = 0, lastReport = 0, lastPulse = 0;
+unsigned long lastPing = 0, lastReport = 0, lastClose = 0;
 int distanceCm = -1;
+int closeReadings = 0;               // consecutive close readings (2 needed, to ignore noise)
+bool warned = false;                 // already spun for the current obstacle
 
 void motors(int l, int r) { analogWrite(MOTOR_L, l); analogWrite(MOTOR_R, r); }
 
@@ -131,18 +134,23 @@ void loop() {
 
   // 2) Local obstacle detection, independent of the laptop
   unsigned long now = millis();
-  if (now - lastPing >= 60) {
-    lastPing = now;
-    distanceCm = readDistanceCm();
+  if (now - lastPing < 60) return;
+  lastPing = now;
+  distanceCm = readDistanceCm();
+  bool close = distanceCm > 0 && distanceCm < OBSTACLE_CM;
+  closeReadings = close ? min(closeReadings + 1, 10) : 0;
+
+  if (close) {
+    lastClose = now;
+  } else if (now - lastClose >= CLEAR_MS) {
+    warned = false;  // the path has been clear for a while: re-arm
   }
 
-  if (distanceCm > 0 && distanceCm < OBSTACLE_CM) {
-    // Spin, pause, spin: closer = shorter pauses (almost nonstop up close,
-    // about 3 spins a second at the edge of the range)
-    unsigned long gap = constrain(map(distanceCm, 5, OBSTACLE_CM, 30, 350), 30, 350);
-    if (now - lastPulse >= OBSTACLE_SPIN_MS + gap) {
+  if (closeReadings >= 2) {
+    // One spin when a new obstacle appears; nothing more until the path clears.
+    if (!warned) {
+      warned = true;
       pulse(STRENGTH, STRENGTH, OBSTACLE_SPIN_MS);
-      lastPulse = millis();
     }
     if (now - lastReport >= 1000) {
       lastReport = now;
