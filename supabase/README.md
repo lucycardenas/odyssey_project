@@ -1,12 +1,13 @@
 # Odyssey backend (Supabase)
 
 The caregiver dashboard has no custom server. The FaceTime agent writes rows
-into Supabase, and the Next.js dashboard reads them with realtime updates.
+into Supabase (and the call summary when a call ends), and the Vite dashboard
+in [`../dashboard`](../dashboard/README.md) reads them with realtime updates.
 
 ```
 Glasses (UNO) --serial--> Agent (Node) --writes--> Supabase (Postgres + Auth + Realtime)
-                                                       ^ reads + live updates
-                                                 Next.js dashboard --> Gemini Flash (summaries)
+                   |                                   ^ reads + live updates
+                   +--> Gemini Flash (summary at call end)   Vite dashboard (static, anon key + login)
 ```
 
 ## Tables
@@ -21,7 +22,7 @@ Glasses (UNO) --serial--> Agent (Node) --writes--> Supabase (Postgres + Auth + R
 **Security (RLS):** signed-in caregivers can read everything and update a
 call's `summary`. Nobody else can read anything. The agent and the scripts
 use the service role key, which bypasses RLS, so keep that key on the laptop
-and in Vercel server env only.
+only. The dashboard only ever gets the anon key.
 
 ## Setup (about 10 minutes)
 
@@ -45,8 +46,9 @@ and in Vercel server env only.
    npm run simulate -- --fast
    ```
    Open the dashboard while this runs and the call, transcript and alerts
-   appear live. If `DASHBOARD_URL` and `AGENT_WEBHOOK_SECRET` are set, it also
-   triggers the Gemini summary at the end.
+   appear live. At the end it writes the 3-line summary with Gemini
+   (`GEMINI_API_KEY` in `.env`), or a simple fallback summary without a key.
+   `npm run summarize -- <callId>` re-writes the summary for any call.
 
 ## Writing from the Node agent
 
@@ -73,12 +75,10 @@ await db.from("alerts").insert({ call_id: call.id, type: "left" });
 // When the call ends
 await db.from("calls").update({ ended_at: new Date().toISOString() }).eq("id", call.id);
 
-// Then ask the dashboard to write the 3-line Gemini summary
-await fetch(`${process.env.DASHBOARD_URL}/api/summarize`, {
-  method: "POST",
-  headers: { "content-type": "application/json", "x-agent-secret": process.env.AGENT_WEBHOOK_SECRET },
-  body: JSON.stringify({ callId: call.id }),
-});
+// Then write the 3-line Gemini summary (no dashboard server needed).
+// summarize-call.mjs has no dependencies; it uses the db client you pass in.
+import { summarizeCall } from "../supabase/scripts/summarize-call.mjs";
+summarizeCall(db, call.id, { apiKey: process.env.GEMINI_API_KEY }).catch(console.error);
 ```
 
 Don't `await` these inside latency-sensitive voice handlers; fire them off and

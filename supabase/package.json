@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "seed": "node --env-file=.env scripts/seed.mjs",
-    "simulate": "node --env-file=.env scripts/simulate-call.mjs"
+    "simulate": "node --env-file=.env scripts/simulate-call.mjs",
+    "summarize": "node --env-file=.env scripts/summarize-call.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0"
