@@ -69,10 +69,10 @@ const int STOP_MS = 1000;            // S, and the closest obstacle zone
 // something comes into a CLOSER zone, so walking up to an object gives a spin
 // at 60 cm, two at 30 cm and a long one at 15 cm, while a wall or desk that just
 // sits in front of the sensor never spins it again.
-const int OBSTACLE_CM = 60;          // zone 1: closer than this
-const int CLOSE_CM = 30;             // zone 2
-const int VERY_CLOSE_CM = 15;        // zone 3
-const int HYSTERESIS_CM = 5;         // must move this far back out before a zone re-arms
+const int OBSTACLE_CM = 100;          // zone 1: closer than this
+const int CLOSE_CM = 60;             // zone 2
+const int VERY_CLOSE_CM = 30;        // zone 3
+const int HYSTERESIS_CM = 15;         // must move this far back out before a zone re-arms
 
 unsigned long lastPing = 0;
 int distanceCm = -1;
