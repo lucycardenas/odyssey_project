@@ -54,8 +54,15 @@ void sayNumber(const char* prefix, int value) {
 
 const int MOTOR_L = 5, MOTOR_R = 6;  // PWM pins
 const int TRIG = 9, ECHO = 10;       // HC-SR04
-const int STRENGTH = 170;            // 0-255; about 3.3 V average for 3 V coin motors
-const int OBSTACLE_CM = 60;          // closer than this = local warning buzz
+// Tuned for the kit's small DC motor (driven through a PN2222): it needs full
+// power and a few hundred ms to spin up. For 3 V coin vibration motors use
+// STRENGTH 170 and shorter times.
+const int STRENGTH = 255;            // 0-255
+const int TURN_MS = 500;             // L / R
+const int FOUND_MS = 250;            // F: two of these
+const int STOP_MS = 1000;            // S
+const int OBSTACLE_SPIN_MS = 250;    // each spin while something is close
+const int OBSTACLE_CM = 60;          // closer than this = local warning spins
 
 unsigned long lastPing = 0, lastReport = 0, lastPulse = 0;
 int distanceCm = -1;
@@ -86,11 +93,11 @@ int readDistanceCm() {
 
 void handleCommand(char c) {
   switch (c) {
-    case 'L': pulse(STRENGTH, 0, 250); show("<< LEFT");  break;
-    case 'R': pulse(0, STRENGTH, 250); show("RIGHT >>"); break;
-    case 'F': pulse(STRENGTH, STRENGTH, 120); delay(100);
-              pulse(STRENGTH, STRENGTH, 120); show("FOUND"); break;
-    case 'S': pulse(255, 255, 600); show("STOP"); break;
+    case 'L': pulse(STRENGTH, 0, TURN_MS); show("<< LEFT");  break;
+    case 'R': pulse(0, STRENGTH, TURN_MS); show("RIGHT >>"); break;
+    case 'F': pulse(STRENGTH, STRENGTH, FOUND_MS); delay(200);
+              pulse(STRENGTH, STRENGTH, FOUND_MS); show("FOUND"); break;
+    case 'S': pulse(255, 255, STOP_MS); show("STOP"); break;
     case '?': say("READY"); return;
     default: return;  // ignore newlines and junk
   }
@@ -130,11 +137,12 @@ void loop() {
   }
 
   if (distanceCm > 0 && distanceCm < OBSTACLE_CM) {
-    // Closer = faster pulses: about every 80 ms up close, every 300 ms at the edge
-    unsigned long gap = constrain(map(distanceCm, 5, OBSTACLE_CM, 80, 300), 80, 300);
-    if (now - lastPulse >= gap) {
-      lastPulse = now;
-      pulse(STRENGTH, STRENGTH, 40);
+    // Spin, pause, spin: closer = shorter pauses (almost nonstop up close,
+    // about 3 spins a second at the edge of the range)
+    unsigned long gap = constrain(map(distanceCm, 5, OBSTACLE_CM, 30, 350), 30, 350);
+    if (now - lastPulse >= OBSTACLE_SPIN_MS + gap) {
+      pulse(STRENGTH, STRENGTH, OBSTACLE_SPIN_MS);
+      lastPulse = millis();
     }
     if (now - lastReport >= 1000) {
       lastReport = now;

@@ -23,6 +23,7 @@ also call the buzz tool: left or right when they should turn that way, found whe
 is straight ahead. If you see an immediate hazard, call buzz with stop first, then explain.
 The glasses also have a distance sensor that buzzes on its own when something is close in front of them.`;
 const OBSTACLE_WARNING_GAP_MS = 8000; // speak an obstacle warning at most this often
+const OBSTACLE_CLEAR_MS = 3000; // no reading for this long = the path was clear, so the next one is new
 // Said once, as soon as FaceTime is ready. Keep it short: it is the first thing the caller hears.
 const greeting = 'Greet the caller in one short sentence: say you are Odyssey, their AI guide, and ask how you can help.';
 
@@ -70,11 +71,18 @@ const agent = defineAgent({
     let session = null;
     let greeted = false; // no spoken warnings before FaceTime is ready
     let lastWarning = 0;
+    let lastObstacle = 0;
     const glasses = connectGlasses({
       onObstacle: cm => {
-        logAlert(callId, 'obstacle', cm);
+        // The UNO repeats O:<cm> every second while something stays close. Speak only
+        // when a new obstacle appears (nothing seen for a few seconds before it), so the
+        // AI does not keep saying "stop" about the same desk or wall; the glasses keep
+        // spinning on their own the whole time.
         const now = Date.now();
-        if (!greeted || now - lastWarning < OBSTACLE_WARNING_GAP_MS) return;
+        const newObstacle = now - lastObstacle > OBSTACLE_CLEAR_MS;
+        lastObstacle = now;
+        if (newObstacle) logAlert(callId, 'obstacle', cm);
+        if (!greeted || !newObstacle || now - lastWarning < OBSTACLE_WARNING_GAP_MS) return;
         lastWarning = now;
         try {
           session.generateReply({ instructions: `The glasses' distance sensor sees something ${cm} centimeters straight ahead. Warn the caller to stop in five words or fewer.` });
