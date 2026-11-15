@@ -13,6 +13,7 @@ import {
   todayLabel,
 } from "./lib/format";
 import { supabaseConfigured } from "./lib/supabase";
+import SailingBoat from "./SailingBoat";
 import type { Alert, Call, Message, Profile } from "./lib/types";
 
 type IconName =
@@ -312,7 +313,7 @@ function Brand({ iconClassName }: { iconClassName?: string }) {
       </span>
       <span>
         <strong>NAVASSEY</strong>
-        <small>your way, made clear</small>
+        <small>your way, made clear.</small>
       </span>
     </div>
   );
@@ -435,7 +436,7 @@ function App() {
             <button
               className="icon-button edited-notification-button"
               aria-label="Notifications"
-              onClick={() => setNotice(!notice)}
+              onClick={() => setActive("Glasses")}
             >
               <Icon name="bell" />
               {(!usingLive || recentAlert) && <b />}
@@ -483,7 +484,7 @@ function App() {
                     voyage lead today?
                   </h2>
                   <p className="edited-hero-description">
-                    Start a live video session. Your agent will see your surroundings and guide you
+                    Your agent will see your surroundings and guide you
                     with voice and haptic signals.
                   </p>
                   <button
@@ -493,7 +494,7 @@ function App() {
                     <span>
                       <Icon name="video" size={21} />
                     </span>{" "}
-                    {liveCall ? "Join live session" : "Start live session"}{" "}
+                    {liveCall ? "Join live session" : "Facetime your agent"}{" "}
                     <Icon name="arrow" size={18} />
                   </button>
                 </div>
@@ -507,58 +508,23 @@ function App() {
                   </div>
                   <div className="wave wave-a" />
                   <div className="wave wave-b" />
-                  <svg className="hero-ship" viewBox="0 0 260 120">
-                    <path d="M21 78q104 35 216 0-29 38-105 38Q54 115 21 78Z" />
-                    <path d="M122 78V12M124 18q46 15 67 52h-67ZM112 22Q77 42 55 68h57Z" />
-                    <path d="M40 82q9-10 18 0m5 6q9-10 18 0m5 5q9-10 18 0m55-2q9-10 18 0m5-6q9-10 18 0" />
-                  </svg>
+                  <SailingBoat />
                 </div>
               </section>
 
               <section className="status-grid">
-                <div className="status-card">
+                <div className="status-card glasses-summary">
                   <span className="status-icon blue">
                     <Icon name="glasses" size={24} />
                   </span>
                   <div>
                     <small>SMART GLASSES</small>
-                    <strong>Connected & ready</strong>
+                    <strong>{liveCall ? "On a live call" : "Connected & ready"}</strong>
                     <span>
-                      <i className="green-dot" /> 87% battery
-                    </span>
-                  </div>
-                  <button aria-label="View glasses" onClick={() => setActive("Glasses")}>
-                    <Icon name="arrow" size={18} />
-                  </button>
-                </div>
-                <div className="status-card">
-                  <span className="status-icon sand">
-                    <Icon name="signal" size={22} />
-                  </span>
-                  <div>
-                    <small>HAPTIC GUIDANCE</small>
-                    <strong>Proximity alerts on</strong>
-                    <span>
+                      <i className="green-dot" /> 87% battery ·{" "}
                       {usingLive
                         ? `${alertsToday} alert${alertsToday === 1 ? "" : "s"} today`
                         : "Medium intensity"}
-                    </span>
-                  </div>
-                  <button aria-label="View haptic settings">
-                    <Icon name="arrow" size={18} />
-                  </button>
-                </div>
-                <div className="status-card">
-                  <span className="status-icon red">
-                    <Icon name="glasses" size={23} />
-                  </span>
-                  <div>
-                    <small>GLASSES</small>
-                    <strong>{latestAlert ? alertText(latestAlert).title : "Haptic tool online"}</strong>
-                    <span>
-                      {latestAlert
-                        ? alertText(latestAlert).detail
-                        : "Obstacle · left · right · found"}
                     </span>
                   </div>
                   <button aria-label="View glasses" onClick={() => setActive("Glasses")}>
@@ -804,8 +770,9 @@ function GlassesPanel({
           <p className="eyebrow">THE TOOL</p>
           <h1>Glasses</h1>
           <p>
-            Haptic glasses read the path ahead and answer in pulses, so the traveler can follow
-            without looking at a screen.
+            Haptic glasses pair a FaceTime AI guide with touch. The guide sees through
+your camera, answers your questions aloud, and sends pulses you can feel,
+so you can follow the path without looking at a screen.
           </p>
         </div>
         <button className="primary-button" onClick={onOpen}>
@@ -1121,7 +1088,7 @@ function EmptySection({ title, onLive }: { title: string; onLive: () => void }) 
             <h2>Your path, remembered.</h2>
             <p>This area is ready for your next journey. Start a live session to add new activity.</p>
             <button className="primary-button edited-empty-primary" onClick={onLive}>
-              Start live session
+              Facetime your agent
             </button>
           </>
         )}
