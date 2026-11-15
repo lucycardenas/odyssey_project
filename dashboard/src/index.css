@@ -1238,6 +1238,7 @@ p {
 }
 .sign-in-button {
   width: 100%;
+  margin-top: 22px;
   min-height: 46px;
   border: 0;
   border-radius: 14px;
