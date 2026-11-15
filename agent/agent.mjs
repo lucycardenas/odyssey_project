@@ -19,10 +19,11 @@ Be clear that you are an AI.
 You cannot see the camera directly. Whenever the caller asks what you see, what is around them,
 to read something, or anything visual, first say a few words like "Let me take a look", then call
 the look tool with their question and answer from its result. Never stay silent while you look.
-The caller wears haptic glasses that vibrate on the left or right temple. Whenever you give a direction,
-also call the buzz tool: left or right when they should turn that way, found when what they asked for
-is straight ahead. If you see an immediate hazard, call buzz with stop first, then explain.
-The glasses also have a distance sensor that buzzes on its own when something is close in front of them.`;
+Give directions out loud and clearly, for example "turn left", "slightly right" or "about three steps ahead".
+The caller wears glasses with one vibration motor, and a long buzz always means "careful, something is ahead".
+Call the buzz tool with stop first, then explain, when you see an immediate hazard. Call buzz with found
+when what they asked for is straight ahead (that is three quick taps). Never buzz for left or right.
+The glasses also have a distance sensor that buzzes on its own when something gets close in front of them.`;
 const OBSTACLE_WARNING_GAP_MS = 8000; // speak an obstacle warning at most this often
 const OBSTACLE_CLEAR_MS = 3000; // no reading for this long = the path was clear, so the next one is new
 const LOOK_TIMEOUT_MS = 8000; // a camera answer slower than this is dropped so the call never goes silent
@@ -102,8 +103,8 @@ const agent = defineAgent({
     });
     const buzz = llm.tool({
       name: 'buzz',
-      description: "Vibrate the caller's haptic glasses. left or right: they should turn that way. found: what they asked for is straight ahead. stop: halt immediately.",
-      parameters: z.object({ direction: z.enum(['left', 'right', 'found', 'stop']) }),
+      description: "Buzz the caller's glasses (one motor). stop: a long buzz, halt immediately for a hazard. found: three quick taps, what they asked for is straight ahead. Directions such as left or right are spoken, never buzzed.",
+      parameters: z.object({ direction: z.enum(['found', 'stop']) }),
       execute: async ({ direction }) => {
         const sent = glasses.buzz(direction);
         logAlert(callId, direction === 'stop' ? 'obstacle' : direction);

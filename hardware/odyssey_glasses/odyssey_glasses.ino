@@ -1,10 +1,14 @@
 // odyssey_glasses.ino  (Arduino UNO R3)
 // Haptic glasses for the Odyssey FaceTime guide.
 //
+// One motor, one meaning: a long buzz always means "careful, something is ahead".
+// Directions (left / right) are given by the AI's voice, not by the motor.
+//
 // Laptop -> UNO over USB serial at 115200 baud, one letter per command:
-//   L = turn left (left motor 250 ms)     R = turn right (right motor 250 ms)
-//   F = found it / straight ahead (two short pulses on both)
-//   S = stop now (both motors, 600 ms)    ? = reply READY (connection check)
+//   F = found it / straight ahead: three quick taps (the only "good news" buzz)
+//   S = stop now: one long 1 s buzz
+//   L / R = accepted for compatibility but do not buzz (direction is spoken)
+//   ? = reply READY (connection check)
 // UNO -> laptop, one line each: READY at boot, ACK:<letter> after a command,
 //   O:<cm> each time something comes into a closer warning zone (60, 30, 15 cm).
 //
@@ -58,9 +62,9 @@ const int TRIG = 9, ECHO = 10;       // HC-SR04
 // power and a few hundred ms to spin up. For 3 V coin vibration motors use
 // STRENGTH 170 and shorter times.
 const int STRENGTH = 255;            // 0-255
-const int TURN_MS = 500;             // L / R
-const int FOUND_MS = 250;            // F: two of these
-const int STOP_MS = 1000;            // S
+const int FOUND_TAP_MS = 200;        // F: three taps of this length
+const int FOUND_GAP_MS = 150;        //    with this pause between them
+const int STOP_MS = 1000;            // S, and the closest obstacle zone
 // Obstacle warnings work in distance zones. The motor spins once each time
 // something comes into a CLOSER zone, so walking up to an object gives a spin
 // at 60 cm, two at 30 cm and a long one at 15 cm, while a wall or desk that just
@@ -101,11 +105,14 @@ int readDistanceCm() {
 
 void handleCommand(char c) {
   switch (c) {
-    case 'L': pulse(STRENGTH, 0, TURN_MS); show("<< LEFT");  break;
-    case 'R': pulse(0, STRENGTH, TURN_MS); show("RIGHT >>"); break;
-    case 'F': pulse(STRENGTH, STRENGTH, FOUND_MS); delay(200);
-              pulse(STRENGTH, STRENGTH, FOUND_MS); show("FOUND"); break;
-    case 'S': pulse(255, 255, STOP_MS); show("STOP"); break;
+    case 'L': show("<< LEFT");  break;   // spoken by the AI; no buzz with one motor
+    case 'R': show("RIGHT >>"); break;
+    case 'F': for (int i = 0; i < 3; i++) {
+                if (i) delay(FOUND_GAP_MS);
+                pulse(STRENGTH, STRENGTH, FOUND_TAP_MS);
+              }
+              show("FOUND"); break;
+    case 'S': pulse(STRENGTH, STRENGTH, STOP_MS); show("STOP"); break;
     case '?': say("READY"); return;
     default: return;  // ignore newlines and junk
   }
