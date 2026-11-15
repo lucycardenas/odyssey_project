@@ -2017,3 +2017,279 @@ p {
 .full-list {
   grid-template-columns: 1fr;
 }
+
+.glasses-page h1 {
+  margin: 0 0 8px;
+  font:
+    34px "Marcellus",
+    serif;
+}
+.glasses-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+.glasses-heading > div > p:last-child {
+  max-width: 520px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.glasses-facts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.glasses-facts article,
+.glasses-patterns article {
+  background: #f7e8ce;
+  border: 1px solid #b88c64;
+  border-top: 3px solid var(--terracotta);
+  border-radius: 4px;
+  padding: 14px 16px;
+}
+.glasses-facts small,
+.glasses-patterns small {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  color: #9a8d80;
+  text-transform: uppercase;
+}
+.glasses-facts strong,
+.glasses-patterns strong {
+  display: block;
+  margin: 6px 0 4px;
+  font:
+    16px "Marcellus",
+    serif;
+}
+.glasses-facts span,
+.glasses-patterns span,
+.glasses-steps span,
+.glasses-empty {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.glasses-panel {
+  margin-bottom: 18px;
+}
+.glasses-patterns {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 0 18px 18px;
+}
+.glasses-patterns i {
+  display: block;
+  font-style: normal;
+  letter-spacing: 4px;
+  font-weight: 700;
+  color: var(--wine);
+}
+.glasses-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.glasses-steps {
+  margin: 0;
+  padding: 0 24px 22px 42px;
+}
+.glasses-steps li {
+  margin-bottom: 14px;
+}
+.glasses-steps strong {
+  display: block;
+  font:
+    14px "Marcellus",
+    serif;
+  margin-bottom: 3px;
+}
+.glasses-cues {
+  padding: 0 18px 18px;
+}
+.empty-card.settings-card {
+  align-items: stretch;
+  justify-content: flex-start;
+  text-align: left;
+  min-height: 0;
+  padding: 28px 24px 32px;
+}
+.empty-card.settings-card > span {
+  align-self: center;
+}
+.settings-form {
+  width: min(640px, 100%);
+  margin: 0 auto;
+}
+.settings-form h2,
+.settings-form > p {
+  text-align: center;
+}
+.settings-form > p {
+  margin-bottom: 8px;
+}
+.settings-group {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.settings-group h3 {
+  margin: 0 0 4px;
+  font:
+    16px "Marcellus",
+    serif;
+}
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+}
+.setting-row strong {
+  display: block;
+  font-size: 13px;
+}
+.setting-row p {
+  margin: 3px 0 0;
+  max-width: 360px;
+  text-align: left;
+  font-size: 11px;
+}
+.setting-field {
+  cursor: default;
+}
+.setting-field .login-input {
+  width: 180px;
+  flex: 0 0 auto;
+}
+.theme-toggle,
+.setting-switch,
+.setting-choices button {
+  border: 1px solid #b88c64;
+  background: #fffaf4;
+  color: var(--ink);
+  border-radius: 999px;
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.setting-choices {
+  display: flex;
+  gap: 6px;
+}
+.setting-choices button {
+  text-transform: capitalize;
+}
+.theme-toggle[aria-pressed="true"],
+.setting-switch.on,
+.setting-choices button.on {
+  background: var(--terracotta);
+  color: #17120f;
+  border-color: #17120f;
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #f4e3c8;
+  --paper: #17120f;
+  --muted: #cbb59a;
+  --line: #6d5340;
+  --cream: #241812;
+  --offwhite: #2a1e18;
+  --sand: #e5ad72;
+  --white: #f4e3c8;
+}
+html[data-theme="dark"] body,
+html[data-theme="dark"] .app-shell {
+  background-color: #17120f;
+  color: #f4e3c8;
+}
+html[data-theme="dark"] .topbar {
+  background: rgba(23, 18, 15, 0.94);
+  color: #f4e3c8;
+  border-bottom-color: #6d5340;
+}
+html[data-theme="dark"] .topbar-date,
+html[data-theme="dark"] .connection,
+html[data-theme="dark"] .welcome > div > p:last-child,
+html[data-theme="dark"] .empty-section > p:not(.eyebrow),
+html[data-theme="dark"] .status-card div span,
+html[data-theme="dark"] .journey-info small,
+html[data-theme="dark"] .journey-time,
+html[data-theme="dark"] .conversation p {
+  color: #cbb59a;
+}
+html[data-theme="dark"] .status-card,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .empty-card,
+html[data-theme="dark"] .glasses-facts article,
+html[data-theme="dark"] .glasses-patterns article,
+html[data-theme="dark"] .icon-button,
+html[data-theme="dark"] .login-input,
+html[data-theme="dark"] .theme-toggle,
+html[data-theme="dark"] .setting-switch,
+html[data-theme="dark"] .setting-choices button {
+  background: #241812;
+  color: #f4e3c8;
+  border-color: #6d5340;
+}
+html[data-theme="dark"] .welcome h1,
+html[data-theme="dark"] .empty-section h1,
+html[data-theme="dark"] .panel h3,
+html[data-theme="dark"] .status-card strong,
+html[data-theme="dark"] .settings-group h3 {
+  color: #f4e3c8;
+}
+html[data-theme="dark"] .theme-toggle[aria-pressed="true"],
+html[data-theme="dark"] .setting-switch.on,
+html[data-theme="dark"] .setting-choices button.on {
+  background: var(--terracotta);
+  color: #17120f;
+}
+
+.glasses-cues .haptic-strip {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+.glasses-empty {
+  margin: 0 6px 8px;
+}
+
+@media (max-width: 980px) {
+  .glasses-facts,
+  .glasses-patterns,
+  .glasses-split {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 680px) {
+  .glasses-heading,
+  .glasses-facts,
+  .glasses-patterns,
+  .glasses-split {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .setting-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .setting-field .login-input {
+    width: 100%;
+  }
+}

@@ -51,7 +51,7 @@ can work on the design without Supabase.
 | `src/lib/types.ts` | Row types for `profiles`, `calls`, `messages`, `alerts`. |
 
 What is live now: the traveler's name and initials, today's date, the greeting,
-the "on a call now" pill, haptic alert count, care circle names, the
+the "on a call now" pill, haptic alert count, the Glasses page, the
 notification bell, "Places you've been", "Recent conversations", the full lists
 under My journeys and Conversations, and the session modal (live caption, last
 haptic cue, transcript and summary). Weather, battery and the mythic chapters

@@ -17,6 +17,7 @@ import type { Alert, Call, Message, Profile } from "./lib/types";
 
 type IconName =
   | "sun"
+  | "moon"
   | "home"
   | "route"
   | "chat"
@@ -49,6 +50,11 @@ function Icon({
       <>
         <circle cx="12" cy="12" r="3.5" />
         <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42" />
+      </>
+    ),
+    moon: (
+      <>
+        <path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5Z" />
       </>
     ),
     home: (
@@ -320,6 +326,9 @@ type ConversationItem = { id: string | null; title: string; time: string; summar
 
 function App() {
   const [active, setActive] = useState("Today");
+  useEffect(() => {
+    document.documentElement.dataset.theme = loadPrefs().theme;
+  }, []);
   const [liveOpen, setLiveOpen] = useState(false);
   const [openCallId, setOpenCallId] = useState<string | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -377,7 +386,7 @@ function App() {
     ["Today", "home"],
     ["My journeys", "route"],
     ["Conversations", "chat"],
-    ["Care circle", "people"],
+    ["Glasses", "glasses"],
   ] as [string, IconName][];
 
   return (
@@ -401,9 +410,6 @@ function App() {
             className={active === "Settings" ? "active" : ""}
           >
             <Icon name="settings" /> <span>Settings</span>
-          </button>
-          <button onClick={() => setActive("Help")} className={active === "Help" ? "active" : ""}>
-            <Icon name="help" /> <span>Help & accessibility</span>
           </button>
         </nav>
         <button className="profile-card" onClick={() => setLoginOpen(true)}>
@@ -521,7 +527,7 @@ function App() {
                       <i className="green-dot" /> 87% battery
                     </span>
                   </div>
-                  <button aria-label="View glasses settings">
+                  <button aria-label="View glasses" onClick={() => setActive("Glasses")}>
                     <Icon name="arrow" size={18} />
                   </button>
                 </div>
@@ -544,54 +550,24 @@ function App() {
                 </div>
                 <div className="status-card">
                   <span className="status-icon red">
-                    <Icon name="people" size={23} />
+                    <Icon name="glasses" size={23} />
                   </span>
                   <div>
-                    <small>CARE CIRCLE</small>
-                    <strong>
-                      {usingLive
-                        ? `${caregivers.length} ${caregivers.length === 1 ? "person" : "people"} available`
-                        : "2 people available"}
-                    </strong>
+                    <small>GLASSES</small>
+                    <strong>{latestAlert ? alertText(latestAlert).title : "Haptic tool online"}</strong>
                     <span>
-                      {usingLive ? caregivers.map((c) => c.name).join(" & ") : "Maya & Daniel"}
+                      {latestAlert
+                        ? alertText(latestAlert).detail
+                        : "Obstacle · left · right · found"}
                     </span>
                   </div>
-                  <button aria-label="View care circle" onClick={() => setActive("Care circle")}>
+                  <button aria-label="View glasses" onClick={() => setActive("Glasses")}>
                     <Icon name="arrow" size={18} />
                   </button>
                 </div>
               </section>
 
-              <section className="mythic-section">
-                <div className="mythic-heading">
-                  <div>
-                    <p className="eyebrow">THE TALE SO FAR</p>
-                    <h3>Trials of the long voyage</h3>
-                  </div>
-                  <p>
-                    Every obstacle becomes a landmark. Every landmark brings you closer to home.
-                  </p>
-                </div>
-                <div className="mythic-grid">
-                  {mythicChapters.map((chapter) => (
-                    <article className="mythic-card" key={chapter.title}>
-                      <div className="chapter-top">
-                        <span>BOOK {chapter.number}</span>
-                        <span>{chapter.place}</span>
-                      </div>
-                      <div className="vase-panel">
-                        <VaseScene type={chapter.type} />
-                      </div>
-                      <div className="chapter-copy">
-                        <h4>{chapter.title}</h4>
-                        <p>{chapter.description}</p>
-                        <span className="lesson">{chapter.lesson}</span>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
+              
 
               <section className="dashboard-grid">
                 <JourneysPanel
@@ -606,6 +582,13 @@ function App() {
                 />
               </section>
             </>
+          ) : active === "Glasses" ? (
+            <GlassesPanel
+              usingLive={usingLive}
+              alerts={voyage.alerts}
+              live={Boolean(liveCall)}
+              onOpen={() => openCall(liveCall?.id ?? voyage.calls[0]?.id ?? null)}
+            />
           ) : active === "My journeys" && usingLive && journeys.length ? (
             <section className="dashboard-grid full-list">
               <JourneysPanel items={journeys} onOpen={openCall} />
@@ -636,7 +619,7 @@ function App() {
               className={`${label === "Today" ? "mobile-icon-ink" : "mobile-icon-blue"} ${label === "My journeys" ? "edited-journeys-icon" : ""}`}
             />
             <span
-              className={`mobile-label-blue ${label === "Today" || label === "My journeys" ? "edited-mobile-label-ink" : ""} ${label === "Conversations" || label === "Care circle" ? "edited-secondary-mobile-label-ink" : ""}`}
+              className={`mobile-label-blue ${label === "Today" || label === "My journeys" ? "edited-mobile-label-ink" : ""} ${label === "Conversations" || label === "Glasses" ? "edited-secondary-mobile-label-ink" : ""}`}
             >
               {label === "My journeys" ? "Journeys" : label}
             </span>
@@ -767,12 +750,359 @@ function ConversationsPanel({
   );
 }
 
+const HAPTIC_LANGUAGE: Alert[] = [
+  { id: "obstacle", call_id: null, type: "obstacle", distance_cm: 42, created_at: "" },
+  { id: "left", call_id: null, type: "left", distance_cm: null, created_at: "" },
+  { id: "right", call_id: null, type: "right", distance_cm: null, created_at: "" },
+  { id: "found", call_id: null, type: "found", distance_cm: null, created_at: "" },
+];
+
+const sampleCues: Alert[] = [
+  {
+    id: "sample-obstacle",
+    call_id: null,
+    type: "obstacle",
+    distance_cm: 110,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "sample-right",
+    call_id: null,
+    type: "right",
+    distance_cm: null,
+    created_at: new Date(Date.now() - 4 * 60_000).toISOString(),
+  },
+  {
+    id: "sample-found",
+    call_id: null,
+    type: "found",
+    distance_cm: null,
+    created_at: new Date(Date.now() - 12 * 60_000).toISOString(),
+  },
+];
+
+function GlassesPanel({
+  usingLive,
+  alerts,
+  live,
+  onOpen,
+}: {
+  usingLive: boolean;
+  alerts: Alert[];
+  live: boolean;
+  onOpen: () => void;
+}) {
+  const cues = usingLive ? alerts : sampleCues;
+  const startOfToday = new Date().setHours(0, 0, 0, 0);
+  const today = cues.filter((a) => +new Date(a.created_at) >= startOfToday);
+  const count = (type: Alert["type"]) => today.filter((a) => a.type === type).length;
+
+  return (
+    <section className="glasses-page">
+      <div className="glasses-heading">
+        <div>
+          <p className="eyebrow">THE TOOL</p>
+          <h1>Glasses</h1>
+          <p>
+            Haptic glasses read the path ahead and answer in pulses, so the traveler can follow
+            without looking at a screen.
+          </p>
+        </div>
+        <button className="primary-button" onClick={onOpen}>
+          <span>
+            <Icon name="video" size={18} />
+          </span>
+          {live ? "Watch live cues" : "Open a session"}
+          <Icon name="arrow" size={16} />
+        </button>
+      </div>
+
+      <div className="glasses-facts">
+        <article>
+          <small>LINK</small>
+          <strong>{live ? "On a live call" : "Connected"}</strong>
+          <span>UNO glasses talk to the agent over serial. The agent writes each buzz here.</span>
+        </article>
+        <article>
+          <small>CHARGE</small>
+          <strong>87% battery</strong>
+          <span>Last reported charge. The glasses stay paired while the traveler is signed in.</span>
+        </article>
+        <article>
+          <small>SENSOR</small>
+          <strong>Ultrasonic obstacle</strong>
+          <span>Distance is measured in centimeters and sent as a steady buzz when something is ahead.</span>
+        </article>
+        <article>
+          <small>TODAY</small>
+          <strong>
+            {today.length} cue{today.length === 1 ? "" : "s"}
+          </strong>
+          <span>
+            {count("obstacle")} obstacle · {count("left")} left · {count("right")} right · {count("found")} found
+          </span>
+        </article>
+      </div>
+
+      <div className="panel glasses-panel">
+        <div className="panel-head">
+          <div>
+            <p className="eyebrow">HAPTIC LANGUAGE</p>
+            <h3>What the glasses say</h3>
+          </div>
+        </div>
+        <div className="glasses-patterns">
+          {HAPTIC_LANGUAGE.map((cue) => {
+            const text = alertText(cue);
+            return (
+              <article key={cue.id}>
+                <i>{text.pattern}</i>
+                <strong>{text.title}</strong>
+                <span>{text.detail}</span>
+                <small>{cue.type}</small>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="glasses-split">
+        <div className="panel glasses-panel">
+          <div className="panel-head">
+            <div>
+              <p className="eyebrow">HOW IT WORKS</p>
+              <h3>From the frame to the log</h3>
+            </div>
+          </div>
+          <ol className="glasses-steps">
+            <li>
+              <strong>The glasses measure</strong>
+              <span>The ultrasonic sensor reports an obstacle and how many centimeters are ahead.</span>
+            </li>
+            <li>
+              <strong>The agent guides</strong>
+              <span>It sends a left, right, or found buzz when the traveler should turn or has arrived.</span>
+            </li>
+            <li>
+              <strong>The dashboard remembers</strong>
+              <span>Each event is stored with the call, so a caregiver can replay what the glasses said.</span>
+            </li>
+          </ol>
+        </div>
+        <div className="panel glasses-panel">
+          <div className="panel-head">
+            <div>
+              <p className="eyebrow">RECENT CUES</p>
+              <h3>{usingLive ? "From this voyage" : "Sample from the tool"}</h3>
+            </div>
+          </div>
+          <div className="glasses-cues">
+            {cues.length ? (
+              cues.slice(0, 6).map((cue) => {
+                const text = alertText(cue);
+                return (
+                  <div className="haptic-strip" key={cue.id}>
+                    <i>{text.pattern}</i>
+                    <span>
+                      <strong>{text.title}</strong>
+                      <small>
+                        {text.detail}
+                        {cue.created_at ? ` · ${dayTime(cue.created_at)}` : ""}
+                      </small>
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="glasses-empty">No haptic cues yet. They appear here as the glasses buzz.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+type Theme = "light" | "dark";
+type HapticLevel = "low" | "medium" | "high";
+type Prefs = {
+  theme: Theme;
+  haptics: HapticLevel;
+  voice: boolean;
+  glassesAlerts: boolean;
+  displayName: string;
+  shareSummaries: boolean;
+  saveTranscripts: boolean;
+};
+
+const PREFS_KEY = "navassey-settings";
+const defaultPrefs: Prefs = {
+  theme: "light",
+  haptics: "medium",
+  voice: true,
+  glassesAlerts: true,
+  displayName: "",
+  shareSummaries: true,
+  saveTranscripts: true,
+};
+
+function loadPrefs(): Prefs {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    return raw ? { ...defaultPrefs, ...JSON.parse(raw) } : defaultPrefs;
+  } catch {
+    return defaultPrefs;
+  }
+}
+
+function savePrefs(prefs: Prefs) {
+  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  document.documentElement.dataset.theme = prefs.theme;
+}
+
+function SettingsForm() {
+  const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
+
+  function update(next: Partial<Prefs>) {
+    setPrefs((current) => {
+      const saved = { ...current, ...next };
+      savePrefs(saved);
+      return saved;
+    });
+  }
+
+  return (
+    <div className="settings-form">
+      <h2>Preferences</h2>
+      <p>Adjust your devices, account, and privacy preferences.</p>
+
+      <section className="settings-group">
+        <h3>Appearance</h3>
+        <div className="setting-row">
+          <div>
+            <strong>{prefs.theme === "dark" ? "Dark mode" : "Light mode"}</strong>
+            <p>Switch the dashboard between light and dark.</p>
+          </div>
+          <button
+            type="button"
+            className="theme-toggle"
+            aria-pressed={prefs.theme === "dark"}
+            onClick={() => update({ theme: prefs.theme === "dark" ? "light" : "dark" })}
+          >
+            <Icon name={prefs.theme === "dark" ? "sun" : "moon"} size={16} />
+            {prefs.theme === "dark" ? "Light mode" : "Dark mode"}
+          </button>
+        </div>
+      </section>
+
+      <section className="settings-group">
+        <h3>Devices</h3>
+        <div className="setting-row">
+          <div>
+            <strong>Haptic intensity</strong>
+            <p>How strong the glasses buzz for obstacles and turns.</p>
+          </div>
+          <div className="setting-choices" role="group" aria-label="Haptic intensity">
+            {(["low", "medium", "high"] as HapticLevel[]).map((level) => (
+              <button
+                key={level}
+                type="button"
+                className={prefs.haptics === level ? "on" : ""}
+                aria-pressed={prefs.haptics === level}
+                onClick={() => update({ haptics: level })}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="setting-row">
+          <div>
+            <strong>Voice guidance</strong>
+            <p>Let the agent speak directions as well as buzz.</p>
+          </div>
+          <button
+            type="button"
+            className={`setting-switch${prefs.voice ? " on" : ""}`}
+            aria-pressed={prefs.voice}
+            onClick={() => update({ voice: !prefs.voice })}
+          >
+            {prefs.voice ? "On" : "Off"}
+          </button>
+        </div>
+        <div className="setting-row">
+          <div>
+            <strong>Glasses alerts</strong>
+            <p>Show obstacle and guidance cues in the dashboard.</p>
+          </div>
+          <button
+            type="button"
+            className={`setting-switch${prefs.glassesAlerts ? " on" : ""}`}
+            aria-pressed={prefs.glassesAlerts}
+            onClick={() => update({ glassesAlerts: !prefs.glassesAlerts })}
+          >
+            {prefs.glassesAlerts ? "On" : "Off"}
+          </button>
+        </div>
+      </section>
+
+      <section className="settings-group">
+        <h3>Account</h3>
+        <label className="setting-row setting-field" htmlFor="display-name">
+          <div>
+            <strong>Preferred name</strong>
+            <p>Saved on this device. Your voyage profile is unchanged.</p>
+          </div>
+          <input
+            id="display-name"
+            className="login-input"
+            value={prefs.displayName}
+            placeholder="Alex"
+            onChange={(e) => update({ displayName: e.target.value })}
+          />
+        </label>
+      </section>
+
+      <section className="settings-group">
+        <h3>Privacy</h3>
+        <div className="setting-row">
+          <div>
+            <strong>Share voyage summaries</strong>
+            <p>Caregivers can read the written summary after a call.</p>
+          </div>
+          <button
+            type="button"
+            className={`setting-switch${prefs.shareSummaries ? " on" : ""}`}
+            aria-pressed={prefs.shareSummaries}
+            onClick={() => update({ shareSummaries: !prefs.shareSummaries })}
+          >
+            {prefs.shareSummaries ? "On" : "Off"}
+          </button>
+        </div>
+        <div className="setting-row">
+          <div>
+            <strong>Keep transcripts</strong>
+            <p>Store spoken lines with the voyage so they can be reviewed.</p>
+          </div>
+          <button
+            type="button"
+            className={`setting-switch${prefs.saveTranscripts ? " on" : ""}`}
+            aria-pressed={prefs.saveTranscripts}
+            onClick={() => update({ saveTranscripts: !prefs.saveTranscripts })}
+          >
+            {prefs.saveTranscripts ? "On" : "Off"}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function EmptySection({ title, onLive }: { title: string; onLive: () => void }) {
   const descriptions: Record<string, string> = {
     "My journeys": "Review saved routes and every place your agent helped you navigate.",
     Conversations: "Read summaries and notes from your recent live sessions.",
-    "Care circle": "Manage the trusted people who can support your journey.",
-    Settings: "Adjust your devices, haptic language, voice, and privacy preferences.",
+    Settings: "Adjust your devices, account, and privacy preferences.",
     Help: "Accessibility help, device tutorials, and support are always close at hand.",
   };
   return (
@@ -780,18 +1110,21 @@ function EmptySection({ title, onLive }: { title: string; onLive: () => void }) 
       <p className="eyebrow edited-empty-eyebrow">NAVASSEY</p>
       <h1>{title}</h1>
       <p>{descriptions[title]}</p>
-      <div className="empty-card edited-empty-card">
+      <div className={`empty-card edited-empty-card${title === "Settings" ? " settings-card" : ""}`}>
         <span>
-          <Icon
-            name={title === "Care circle" ? "people" : title === "Settings" ? "settings" : "route"}
-            size={32}
-          />
+          <Icon name={title === "Settings" ? "settings" : "route"} size={32} />
         </span>
-        <h2>Your path, remembered.</h2>
-        <p>This area is ready for your next journey. Start a live session to add new activity.</p>
-        <button className="primary-button edited-empty-primary" onClick={onLive}>
-          Start live session
-        </button>
+        {title === "Settings" ? (
+          <SettingsForm />
+        ) : (
+          <>
+            <h2>Your path, remembered.</h2>
+            <p>This area is ready for your next journey. Start a live session to add new activity.</p>
+            <button className="primary-button edited-empty-primary" onClick={onLive}>
+              Start live session
+            </button>
+          </>
+        )}
       </div>
     </section>
   );
