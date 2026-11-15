@@ -430,8 +430,8 @@ function App() {
           </div>
           <div className="topbar-date">{todayLabel()}</div>
           <div className="top-actions">
-            <span className="connection">
-              <i /> Glasses connected
+            <span className={`connection${liveCall ? "" : " idle"}`} aria-live="polite">
+              <i /> {liveCall ? "On a FaceTime call" : "No active call"}
             </span>
             <button
               className="icon-button edited-notification-button"
@@ -519,12 +519,11 @@ function App() {
                   </span>
                   <div>
                     <small>SMART GLASSES</small>
-                    <strong>{liveCall ? "On a live call" : "Connected & ready"}</strong>
+                    <strong>{liveCall ? "On a FaceTime call" : "Not on a call"}</strong>
                     <span>
-                      <i className="green-dot" /> 87% battery ·{" "}
-                      {usingLive
-                        ? `${alertsToday} alert${alertsToday === 1 ? "" : "s"} today`
-                        : "Medium intensity"}
+                      <i className={`green-dot${liveCall ? "" : " idle"}`} />{" "}
+                      {liveCall ? "Glasses active · " : "Glasses idle · "}
+                      {alertsToday} alert{alertsToday === 1 ? "" : "s"} today
                     </span>
                   </div>
                   <button aria-label="View glasses" onClick={() => setActive("Glasses")}>

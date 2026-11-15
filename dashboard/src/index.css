@@ -226,6 +226,14 @@ main {
   background: #5c8c68;
   box-shadow: 0 0 0 3px #dbe9dc;
 }
+.connection.idle {
+  color: #8a7d6b;
+}
+.connection.idle i,
+.green-dot.idle {
+  background: #b5a894;
+  box-shadow: 0 0 0 3px #e8dfd0;
+}
 .icon-button {
   border: 1px solid var(--line);
   background: #fffaf4;
