@@ -6,7 +6,7 @@
 //   F = found it / straight ahead (two short pulses on both)
 //   S = stop now (both motors, 600 ms)    ? = reply READY (connection check)
 // UNO -> laptop, one line each: READY at boot, ACK:<letter> after a command,
-//   O:<cm> when something is closer than OBSTACLE_CM (at most once a second).
+//   O:<cm> each time something comes into a closer warning zone (60, 30, 15 cm).
 //
 // Obstacle warnings run on the UNO itself, so they keep working even when the
 // laptop, Wi-Fi or the AI lag behind.
@@ -61,14 +61,19 @@ const int STRENGTH = 255;            // 0-255
 const int TURN_MS = 500;             // L / R
 const int FOUND_MS = 250;            // F: two of these
 const int STOP_MS = 1000;            // S
-const int OBSTACLE_SPIN_MS = 600;    // one spin when a new obstacle appears
-const int OBSTACLE_CM = 60;          // closer than this = obstacle
-const unsigned long CLEAR_MS = 2000; // path clear this long = the next obstacle is new
+// Obstacle warnings work in distance zones. The motor spins once each time
+// something comes into a CLOSER zone, so walking up to an object gives a spin
+// at 60 cm, two at 30 cm and a long one at 15 cm, while a wall or desk that just
+// sits in front of the sensor never spins it again.
+const int OBSTACLE_CM = 60;          // zone 1: closer than this
+const int CLOSE_CM = 30;             // zone 2
+const int VERY_CLOSE_CM = 15;        // zone 3
+const int HYSTERESIS_CM = 5;         // must move this far back out before a zone re-arms
 
-unsigned long lastPing = 0, lastReport = 0, lastClose = 0;
+unsigned long lastPing = 0;
 int distanceCm = -1;
-int closeReadings = 0;               // consecutive close readings (2 needed, to ignore noise)
-bool warned = false;                 // already spun for the current obstacle
+int warnedZone = 0;                  // closest zone already warned about
+int pendingZone = 0;                 // zone seen on the previous reading (2 in a row needed)
 
 void motors(int l, int r) { analogWrite(MOTOR_L, l); analogWrite(MOTOR_R, r); }
 
@@ -137,25 +142,27 @@ void loop() {
   if (now - lastPing < 60) return;
   lastPing = now;
   distanceCm = readDistanceCm();
-  bool close = distanceCm > 0 && distanceCm < OBSTACLE_CM;
-  closeReadings = close ? min(closeReadings + 1, 10) : 0;
+  int zone = zoneFor(distanceCm);
 
-  if (close) {
-    lastClose = now;
-  } else if (now - lastClose >= CLEAR_MS) {
-    warned = false;  // the path has been clear for a while: re-arm
-  }
+  // Moved back out (with a little margin so jitter at a border doesn't count): re-arm.
+  int farZone = zoneFor(distanceCm < 0 ? -1 : distanceCm - HYSTERESIS_CM);
+  if (farZone < warnedZone) warnedZone = farZone;
 
-  if (closeReadings >= 2) {
-    // One spin when a new obstacle appears; nothing more until the path clears.
-    if (!warned) {
-      warned = true;
-      pulse(STRENGTH, STRENGTH, OBSTACLE_SPIN_MS);
-    }
-    if (now - lastReport >= 1000) {
-      lastReport = now;
-      sayNumber("O:", distanceCm);
-      show("OBSTACLE");
-    }
+  // Came into a closer zone on two readings in a row: warn once for that zone.
+  if (zone > warnedZone && pendingZone > warnedZone) {
+    warnedZone = min(zone, pendingZone);
+    if (warnedZone == 1) pulse(STRENGTH, STRENGTH, 500);
+    else if (warnedZone == 2) { pulse(STRENGTH, STRENGTH, 300); delay(150); pulse(STRENGTH, STRENGTH, 300); }
+    else pulse(STRENGTH, STRENGTH, 1000);
+    sayNumber("O:", distanceCm);  // the agent logs it and can say "stop"
+    show("OBSTACLE");
   }
+  pendingZone = zone;
+}
+
+int zoneFor(int cm) {
+  if (cm <= 0 || cm >= OBSTACLE_CM) return 0;
+  if (cm >= CLOSE_CM) return 1;
+  if (cm >= VERY_CLOSE_CM) return 2;
+  return 3;
 }
